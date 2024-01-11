@@ -1,18 +1,17 @@
 use std::fs;
 use std::str;
+use std::env;
+
 use rand::Rng;
 use std::collections::HashMap;
-use ignore::{WalkBuilder, DirEntry};
+use ignore::WalkBuilder;
 use termsize;
 use colored::*;
 
 fn scan_dir(dir: &str) -> HashMap<String, (u64, i32)>{
     let mut dir_data: HashMap<String, (u64, i32)> = HashMap::new();
-    let mut sub_dirs: Vec<DirEntry> = vec![];
     for entry in WalkBuilder::new(dir).hidden(true).build().into_iter().filter_map(|e| e.ok()) {
-    // for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
         if entry.metadata().unwrap().is_dir() && entry.path().canonicalize().unwrap() != fs::canonicalize(dir).unwrap() {
-            sub_dirs.push(entry);
             continue;
         }
 
@@ -49,22 +48,6 @@ fn scan_dir(dir: &str) -> HashMap<String, (u64, i32)>{
         } else {
             let (old_fs, old_loc) = dir_data.get(&file_type).unwrap();
             dir_data.insert(file_type, (file_size + old_fs, loc + old_loc));
-        }
-
-        // println!("{}", entry.path().display());
-    }
-
-    for d in sub_dirs{
-        let p = d.path().to_str().unwrap();
-        let new_data = scan_dir(p);
-        for key_value in new_data{
-            let (file_type, (file_size, loc)) = key_value;
-            if !dir_data.contains_key(&file_type){
-                dir_data.insert(file_type, (file_size, loc));
-            } else {
-                let (old_fs, old_loc) = dir_data.get(&file_type).unwrap();
-                dir_data.insert(file_type, (file_size + old_fs, loc + old_loc));
-            }
         }
     }
 
@@ -104,16 +87,25 @@ fn get_random_color() -> String{
     colors[rand::thread_rng().gen_range(0..colors.len())].to_string()
 }
 
+fn center_string(input: &str, width: usize) -> String {
+    let padding = (width.saturating_sub(input.len())) / 2;
+    format!("{:width$}{}{:width$}", "", input, "", width = padding)
+}
+
 
 fn main() {
-    let data: HashMap<String, (u64, i32)> = scan_dir(".");
-    let frxnl_data = parse_data(data);
+    let args: Vec<String> = env::args().collect();
+
+    let data: HashMap<String, (u64, i32)> = scan_dir(&args[1]);
+    let frxnl_data = parse_data(data.clone());
     let entries = frxnl_data.len();
     let termsize::Size {cols, ..} = termsize::get().unwrap();
     
-    for (_, frxn) in frxnl_data {
+    for (ft, frxn) in frxnl_data {
+        if frxn < 0.05 {continue;}
         let width_raw = (cols - entries as u16) as f32 * frxn;
         let width = width_raw.round() as u16;
-        print!("{} ", (" ".to_string().repeat(width.into())).on_color(get_random_color()));
+        let thumbnail = format!("{}: {}", ft, data.get(&ft).unwrap().1);
+        print!("{} ", (center_string(&thumbnail, width as usize)).black().on_color(get_random_color()));
     }
 }
