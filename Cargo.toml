@@ -7,4 +7,6 @@ edition = "2021"
 
 [dependencies]
 colored = "2.1.0"
-walkdir = "2.4.0"
+ignore = "0.4.22"
+termsize = "0.1.6"
+rand = "0.8.4"

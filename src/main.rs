@@ -1,14 +1,17 @@
 use std::fs;
+use std::str;
+use rand::Rng;
 use std::collections::HashMap;
-use walkdir::{WalkDir, DirEntry};
-// use colored::*;
+use ignore::{WalkBuilder, DirEntry};
+use termsize;
+use colored::*;
 
 fn scan_dir(dir: &str) -> HashMap<String, (u64, i32)>{
     let mut dir_data: HashMap<String, (u64, i32)> = HashMap::new();
-
     let mut sub_dirs: Vec<DirEntry> = vec![];
-    for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
-        if entry.metadata().unwrap().is_dir() && entry.path().to_str().unwrap() != dir {
+    for entry in WalkBuilder::new(dir).hidden(true).build().into_iter().filter_map(|e| e.ok()) {
+    // for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+        if entry.metadata().unwrap().is_dir() && entry.path().canonicalize().unwrap() != fs::canonicalize(dir).unwrap() {
             sub_dirs.push(entry);
             continue;
         }
@@ -68,9 +71,49 @@ fn scan_dir(dir: &str) -> HashMap<String, (u64, i32)>{
     dir_data
 }
 
+
+fn parse_data(data: HashMap<String, (u64, i32)>) -> HashMap<String, f32>{
+    let mut total_lines = 0;
+    let mut _total_size = 0;
+    
+    for (_, (s, l)) in data.clone() {
+        total_lines += l;
+        _total_size += s;
+    }
+
+    let mut loc_fractional_data: HashMap<String, f32> = HashMap::new();
+    for (t, (_, l)) in data.clone() {
+        loc_fractional_data.insert(t, l as f32 / total_lines as f32);
+    }
+
+    loc_fractional_data
+}
+
+
+fn get_random_color() -> String{
+    let colors = vec![
+        "Red",
+        "Green",
+        "Yellow",
+        "Blue",
+        "Magenta",
+        "Cyan"
+    ];
+
+
+    colors[rand::thread_rng().gen_range(0..colors.len())].to_string()
+}
+
+
 fn main() {
-    let data = scan_dir(".");
-    for (key, (s, l)) in data {
-        println!("{}: {}B {} Lines", key, s, l);
+    let data: HashMap<String, (u64, i32)> = scan_dir(".");
+    let frxnl_data = parse_data(data);
+    let entries = frxnl_data.len();
+    let termsize::Size {cols, ..} = termsize::get().unwrap();
+    
+    for (_, frxn) in frxnl_data {
+        let width_raw = (cols - entries as u16) as f32 * frxn;
+        let width = width_raw.round() as u16;
+        print!("{} ", (" ".to_string().repeat(width.into())).on_color(get_random_color()));
     }
 }
