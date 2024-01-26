@@ -102,7 +102,7 @@ fn main() {
     let termsize::Size {cols, ..} = termsize::get().unwrap();
     
     for (ft, frxn) in frxnl_data {
-        if frxn < 0.05 {continue;}
+        if frxn < 0.02 {continue;}
         let width_raw = (cols - entries as u16) as f32 * frxn;
         let width = width_raw.round() as u16;
         let thumbnail = format!("{}: {}", ft, data.get(&ft).unwrap().1);
