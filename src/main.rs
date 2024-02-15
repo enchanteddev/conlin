@@ -89,6 +89,7 @@ fn get_random_color() -> String{
 
 fn center_string(input: &str, width: usize) -> String {
     let padding = (width.saturating_sub(input.len())) / 2;
+    // println!("pad: {}", padding);
     format!("{:width$}{}{:width$}", "", input, "", width = padding)
 }
 
@@ -98,7 +99,8 @@ fn main() {
 
     let data: HashMap<String, (u64, i32)> = scan_dir(&args[1]);
     let frxnl_data = parse_data(data.clone());
-    let entries = frxnl_data.len();
+    let entries_with_min_frxn: Vec<(&String, &f32)> = frxnl_data.iter().filter(|(_, v)|(v.to_owned().clone() > 0.03)).collect();
+    let entries = entries_with_min_frxn.len();
     let termsize::Size {cols, ..} = termsize::get().unwrap();
     
     for (ft, frxn) in frxnl_data {
